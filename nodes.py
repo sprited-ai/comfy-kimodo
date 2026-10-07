@@ -108,6 +108,9 @@ class Kimodo_LoadModel:
                     "default": "",
                     "tooltip": "LLM2Vec-compatible base model repository or local path. Empty uses the upstream default.",
                 }),
+                "model_revision": ("STRING", {"default": "", "tooltip": "Hugging Face model revision. Empty uses upstream defaults."}),
+                "text_encoder_base_revision": ("STRING", {"default": ""}),
+                "text_encoder_adapter_revision": ("STRING", {"default": ""}),
             },
         }
 
@@ -116,7 +119,10 @@ class Kimodo_LoadModel:
     FUNCTION = "load"
     CATEGORY = "Kimodo"
 
-    def load(self, model, text_encoder_base_model=""):
+    def load(
+        self, model, text_encoder_base_model="", model_revision="",
+        text_encoder_base_revision="", text_encoder_adapter_revision="",
+    ):
         device = mm.get_torch_device()
         print(f"[Kimodo] Loading model: {model}", flush=True)
 
@@ -132,7 +138,10 @@ class Kimodo_LoadModel:
 
         kimodo_model, resolved = load_model(
             short_key, device=str(device), return_resolved_name=True,
-            text_encoder_base_model=text_encoder_base_model.strip() or None
+            text_encoder_base_model=text_encoder_base_model.strip() or None,
+            model_revision=model_revision.strip() or None,
+            text_encoder_base_revision=text_encoder_base_revision.strip() or None,
+            text_encoder_adapter_revision=text_encoder_adapter_revision.strip() or None,
         )
 
         info = get_model_info(resolved)

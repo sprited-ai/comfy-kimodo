@@ -19,6 +19,8 @@ class LLM2VecEncoder:
         peft_model_name_or_path: str,
         dtype: str,
         llm_dim: int,
+        base_model_revision: str | None = None,
+        peft_model_revision: str | None = None,
     ) -> None:
         torch_dtype = getattr(torch, dtype)
         self.llm_dim = llm_dim
@@ -32,6 +34,8 @@ class LLM2VecEncoder:
         self.model = LLM2Vec.from_pretrained(
             base_model_name_or_path=base_model_name_or_path,
             peft_model_name_or_path=peft_model_name_or_path,
+            base_model_revision=base_model_revision,
+            peft_model_revision=peft_model_revision,
             torch_dtype=torch_dtype,
             cache_dir=cache_dir,
         )

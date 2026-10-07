@@ -33,7 +33,7 @@ TEXT_ENCODER_PRESETS = {
 }
 
 
-def _resolve_hf_model_path(modelname: str) -> Path:
+def _resolve_hf_model_path(modelname: str, revision: Optional[str] = None) -> Path:
     """Resolve model name to a local path, using Hugging Face cache or CHECKPOINT_DIR."""
     try:
         repo_id = MODEL_NAMES[modelname]
@@ -42,16 +42,16 @@ def _resolve_hf_model_path(modelname: str) -> Path:
 
     local_cache = get_env_var("LOCAL_CACHE", "False").lower() == "true"
     if not local_cache:
-        snapshot_dir = snapshot_download(repo_id=repo_id)  # will check online no matter what
+        snapshot_dir = snapshot_download(repo_id=repo_id, revision=revision)  # will check online no matter what
         return Path(snapshot_dir)
 
     try:
-        snapshot_dir = snapshot_download(repo_id=repo_id, local_files_only=True)  # will check local cache only
+        snapshot_dir = snapshot_download(repo_id=repo_id, revision=revision, local_files_only=True)  # will check local cache only
         return Path(snapshot_dir)
     except Exception:
         # if local cache is not found, download from online
         try:
-            snapshot_dir = snapshot_download(repo_id=repo_id)
+            snapshot_dir = snapshot_download(repo_id=repo_id, revision=revision)
             return Path(snapshot_dir)
         except Exception:
             raise RuntimeError(f"Could not resolve model '{modelname}' from Hugging Face (repo: {repo_id}). ") from None
@@ -109,6 +109,9 @@ def load_model(
     default_family: Optional[str] = "Kimodo",
     return_resolved_name: bool = False,
     text_encoder_base_model: Optional[str] = None,
+    model_revision: Optional[str] = None,
+    text_encoder_base_revision: Optional[str] = None,
+    text_encoder_adapter_revision: Optional[str] = None,
 ):
     """Load a kimodo model by name (e.g. 'g1', 'soma').
 
@@ -129,7 +132,8 @@ def load_model(
             return only the model.
 
     An explicit text_encoder_base_model selects local LLM2Vec loading, bypassing
-    the text encoder API. The supervised adapter remains unchanged.
+    the text encoder API. The supervised adapter remains unchanged. Explicit revisions pin HF downloads;
+    a model revision takes precedence over CHECKPOINT_DIR.
 
     Returns:
         Loaded model in eval mode, or (model, resolved short key) if
@@ -153,7 +157,7 @@ def load_model(
     resolved_modelname = modelname
 
     # In case, we specify a custom checkpoint directory
-    configured_checkpoint_dir = get_env_var("CHECKPOINT_DIR")
+    configured_checkpoint_dir = None if model_revision else get_env_var("CHECKPOINT_DIR")
     if configured_checkpoint_dir:
         print(f"CHECKPOINT_DIR is set to {configured_checkpoint_dir}, checking the local cache...")
         # Checkpoint folders are named by display name (e.g. Kimodo-SOMA-RP-v1)
@@ -165,10 +169,10 @@ def load_model(
             model_path = Path(configured_checkpoint_dir) / modelname
         if not model_path.exists():
             print(f"Model folder not found at '{model_path}', downloading it from Hugging Face...")
-            model_path = _resolve_hf_model_path(modelname)
+            model_path = _resolve_hf_model_path(modelname, model_revision)
     else:
         # Otherwise, we load the model from the local cache or download it from Hugging Face.
-        model_path = _resolve_hf_model_path(modelname)
+        model_path = _resolve_hf_model_path(modelname, model_revision)
 
     model_config_path = model_path / "config.yaml"
     if not model_config_path.exists():
@@ -181,11 +185,17 @@ def load_model(
         pass
 
     text_encoder_url = get_env_var("TEXT_ENCODER_URL", DEFAULT_TEXT_ENCODER_URL)
+    encoder_conf = (_build_local_text_encoder_conf(text_encoder_base_model)
+                    if text_encoder_base_model or text_encoder_base_revision or text_encoder_adapter_revision
+                    else _select_text_encoder_conf(text_encoder_url))
+    if text_encoder_base_revision:
+        encoder_conf["base_model_revision"] = text_encoder_base_revision
+    if text_encoder_adapter_revision:
+        encoder_conf["peft_model_revision"] = text_encoder_adapter_revision
     runtime_conf = OmegaConf.create(
         {
             "checkpoint_dir": str(model_path),
-            "text_encoder": (_build_local_text_encoder_conf(text_encoder_base_model)
-                             if text_encoder_base_model else _select_text_encoder_conf(text_encoder_url)),
+            "text_encoder": encoder_conf,
         }
     )
     model_cfg = OmegaConf.to_container(OmegaConf.merge(model_conf, runtime_conf), resolve=True)

@@ -118,22 +118,24 @@ class LLM2Vec(nn.Module):
         peft_model_name_or_path=None,
         merge_peft=False,
         enable_bidirectional=True,
+        base_model_revision=None,
+        peft_model_revision=None,
         **kwargs,
     ):
         # pop out encoder args
         keys = ["pooling_mode", "max_length", "doc_max_length", "skip_instruction"]
         encoder_args = {key: kwargs.pop(key, None) for key in keys if kwargs.get(key) is not None}
 
-        tokenizer = AutoTokenizer.from_pretrained(base_model_name_or_path)
+        tokenizer = AutoTokenizer.from_pretrained(base_model_name_or_path, revision=base_model_revision)
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "left"
 
-        config = AutoConfig.from_pretrained(base_model_name_or_path)
+        config = AutoConfig.from_pretrained(base_model_name_or_path, revision=base_model_revision)
         config_class_name = config.__class__.__name__
 
         model_class = cls._get_model_class(config_class_name, enable_bidirectional=enable_bidirectional)
 
-        model = model_class.from_pretrained(base_model_name_or_path, **kwargs)
+        model = model_class.from_pretrained(base_model_name_or_path, revision=base_model_revision, **kwargs)
 
         if os.path.isdir(base_model_name_or_path) and os.path.exists(f"{base_model_name_or_path}/config.json"):
             with open(f"{base_model_name_or_path}/config.json", "r") as fIn:
@@ -146,6 +148,7 @@ class LLM2Vec(nn.Module):
             model = PeftModel.from_pretrained(
                 model,
                 base_model_name_or_path,
+                revision=base_model_revision,
             )
             model = model.merge_and_unload()
 
@@ -153,6 +156,7 @@ class LLM2Vec(nn.Module):
             model = PeftModel.from_pretrained(
                 model,
                 peft_model_name_or_path,
+                revision=peft_model_revision,
             )
             if merge_peft:
                 model = model.merge_and_unload()
