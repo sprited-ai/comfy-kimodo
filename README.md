@@ -9,6 +9,11 @@ for upstream behavior, or select
 LLM2Vec base locally with the existing supervised adapter. Llama 3 terms still apply.
 The merged model retains the original Llama instruction formatting.
 
+`pip install -r requirements.txt` installs the bundled Kimodo package and builds
+its motion-correction extension. A C++ compiler is required; CMake is installed
+in the isolated build environment. FBX export is optional: install
+`requirements-fbx.txt` if needed.
+
 Install this fork instead of the original plugin, not alongside it: node names
 are shared. Sprute workflows select the merged encoder explicitly.
 
@@ -60,7 +65,7 @@ Clone this repository into your ComfyUI `custom_nodes` directory:
 
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/jtydhr88/ComfyUI-Kimodo.git
+git clone https://github.com/sprited-ai/comfy-kimodo.git ComfyUI-Kimodo
 ```
 
 Install dependencies:
