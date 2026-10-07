@@ -64,17 +64,17 @@ def _build_api_text_encoder_conf(text_encoder_url: str) -> dict:
     }
 
 
-def _build_local_text_encoder_conf() -> dict:
+def _build_local_text_encoder_conf(base_model_name_or_path: Optional[str] = None) -> dict:
     text_encoder_name = get_env_var("TEXT_ENCODER", DEFAULT_TEXT_ENCODER)
     if text_encoder_name not in TEXT_ENCODER_PRESETS:
         available = ", ".join(sorted(TEXT_ENCODER_PRESETS))
         raise ValueError(f"Unknown TEXT_ENCODER='{text_encoder_name}'. Available: {available}")
 
     preset = TEXT_ENCODER_PRESETS[text_encoder_name]
-    return {
-        "_target_": preset["target"],
-        **preset["kwargs"],
-    }
+    conf = {"_target_": preset["target"], **preset["kwargs"]}
+    if base_model_name_or_path:
+        conf["base_model_name_or_path"] = base_model_name_or_path
+    return conf
 
 
 def _select_text_encoder_conf(text_encoder_url: str) -> dict:
@@ -108,6 +108,7 @@ def load_model(
     eval_mode: bool = True,
     default_family: Optional[str] = "Kimodo",
     return_resolved_name: bool = False,
+    text_encoder_base_model: Optional[str] = None,
 ):
     """Load a kimodo model by name (e.g. 'g1', 'soma').
 
@@ -126,6 +127,9 @@ def load_model(
             Default "Kimodo".
         return_resolved_name: If True, return (model, resolved_short_key). If False,
             return only the model.
+
+    An explicit text_encoder_base_model selects local LLM2Vec loading, bypassing
+    the text encoder API. The supervised adapter remains unchanged.
 
     Returns:
         Loaded model in eval mode, or (model, resolved short key) if
@@ -180,7 +184,8 @@ def load_model(
     runtime_conf = OmegaConf.create(
         {
             "checkpoint_dir": str(model_path),
-            "text_encoder": _select_text_encoder_conf(text_encoder_url),
+            "text_encoder": (_build_local_text_encoder_conf(text_encoder_base_model)
+                             if text_encoder_base_model else _select_text_encoder_conf(text_encoder_url)),
         }
     )
     model_cfg = OmegaConf.to_container(OmegaConf.merge(model_conf, runtime_conf), resolve=True)

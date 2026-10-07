@@ -1,3 +1,19 @@
+# Sprited Kimodo fork
+
+Based on [ComfyUI-Kimodo](https://github.com/jtydhr88/ComfyUI-Kimodo).
+
+This fork passes the output skeleton to the separate Post Process node and adds
+an optional `text_encoder_base_model` input to Kimodo Load Model. Leave it empty
+for upstream behavior, or select
+`raducius/Llama-3-8B-Instruct-LLM2Vec-mntp-merged` to load the public merged
+LLM2Vec base locally with the existing supervised adapter. Llama 3 terms still apply.
+The merged model retains the original Llama instruction formatting.
+
+Install this fork instead of the original plugin, not alongside it: node names
+are shared. Sprute workflows select the merged encoder explicitly.
+
+---
+
 # ComfyUI-Kimodo
 
 A ComfyUI plugin that wraps [Kimodo](https://github.com/nv-tlabs/kimodo) — NVIDIA's kinematic motion diffusion model for generating high-quality 3D human and humanoid robot motions from text prompts with optional kinematic constraints.

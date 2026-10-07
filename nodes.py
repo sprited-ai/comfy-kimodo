@@ -103,6 +103,12 @@ class Kimodo_LoadModel:
                 "model": (_MODEL_CHOICES, {"default": _MODEL_CHOICES[0] if _MODEL_CHOICES else "Kimodo-SOMA-RP-v1",
                                            "tooltip": "Kimodo model variant. Models auto-download from HuggingFace on first use."}),
             },
+            "optional": {
+                "text_encoder_base_model": ("STRING", {
+                    "default": "",
+                    "tooltip": "LLM2Vec-compatible base model repository or local path. Empty uses the upstream default.",
+                }),
+            },
         }
 
     RETURN_TYPES = ("KIMODO_MODEL",)
@@ -110,7 +116,7 @@ class Kimodo_LoadModel:
     FUNCTION = "load"
     CATEGORY = "Kimodo"
 
-    def load(self, model):
+    def load(self, model, text_encoder_base_model=""):
         device = mm.get_torch_device()
         print(f"[Kimodo] Loading model: {model}", flush=True)
 
@@ -125,7 +131,8 @@ class Kimodo_LoadModel:
             os.environ["CHECKPOINT_DIR"] = KIMODO_MODELS_DIR
 
         kimodo_model, resolved = load_model(
-            short_key, device=str(device), return_resolved_name=True
+            short_key, device=str(device), return_resolved_name=True,
+            text_encoder_base_model=text_encoder_base_model.strip() or None
         )
 
         info = get_model_info(resolved)
@@ -600,17 +607,17 @@ class Kimodo_Sampler:
         from kimodo.skeleton.definitions import SOMASkeleton30
         skeleton_name = model.skeleton.name
         num_output_joints = output['posed_joints'].shape[2]
-        skel_for_viz = model.skeleton
+        output_skeleton = model.skeleton
         if hasattr(model.skeleton, 'somaskel77') and num_output_joints == 77:
-            skel_for_viz = model.skeleton.somaskel77
+            output_skeleton = model.skeleton.somaskel77
         elif hasattr(model.skeleton, 'somaskel30') and num_output_joints == 30:
-            skel_for_viz = model.skeleton.somaskel30 if hasattr(model.skeleton, 'somaskel30') else model.skeleton
+            output_skeleton = model.skeleton.somaskel30 if hasattr(model.skeleton, 'somaskel30') else model.skeleton
 
-        joint_parents = skel_for_viz.joint_parents.cpu().tolist()
-        joint_names = list(skel_for_viz.bone_order_names) if hasattr(skel_for_viz, 'bone_order_names') else []
+        joint_parents = output_skeleton.joint_parents.cpu().tolist()
+        joint_names = list(output_skeleton.bone_order_names) if hasattr(output_skeleton, 'bone_order_names') else []
         neutral_joints = None
-        if hasattr(skel_for_viz, 'neutral_joints') and skel_for_viz.neutral_joints is not None:
-            neutral_joints = skel_for_viz.neutral_joints.cpu().numpy()
+        if hasattr(output_skeleton, 'neutral_joints') and output_skeleton.neutral_joints is not None:
+            neutral_joints = output_skeleton.neutral_joints.cpu().numpy()
 
         return KimodoMotionData(
             output_dict=output,
@@ -623,7 +630,7 @@ class Kimodo_Sampler:
             joint_parents=joint_parents,
             joint_names=joint_names,
             neutral_joints=neutral_joints,
-            skeleton=model.skeleton,
+            skeleton=output_skeleton,
             constraint_lst=constraint_lst,
         )
 
