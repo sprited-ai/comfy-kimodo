@@ -26,10 +26,15 @@ class LLM2VecEncoder:
         self.llm_dim = llm_dim
 
         cache_dir = os.environ.get("HUGGINGFACE_CACHE_DIR")
+        base_model_id = base_model_name_or_path
 
         if "TEXT_ENCODERS_DIR" in os.environ:
-            base_model_name_or_path = os.path.join(os.environ["TEXT_ENCODERS_DIR"], base_model_name_or_path)
-            peft_model_name_or_path = os.path.join(os.environ["TEXT_ENCODERS_DIR"], peft_model_name_or_path)
+            local_base = os.path.join(os.environ["TEXT_ENCODERS_DIR"], base_model_name_or_path)
+            local_adapter = os.path.join(os.environ["TEXT_ENCODERS_DIR"], peft_model_name_or_path)
+            if os.path.isdir(local_base):
+                base_model_name_or_path = local_base
+            if os.path.isdir(local_adapter):
+                peft_model_name_or_path = local_adapter
 
         self.model = LLM2Vec.from_pretrained(
             base_model_name_or_path=base_model_name_or_path,
@@ -39,6 +44,9 @@ class LLM2VecEncoder:
             torch_dtype=torch_dtype,
             cache_dir=cache_dir,
         )
+        # Local configs may omit the model ID used for instruction formatting.
+        if not self.model.model.config._name_or_path:
+            self.model.model.config._name_or_path = base_model_id
         self.model.eval()
         for p in self.model.parameters():
             p.requires_grad = False

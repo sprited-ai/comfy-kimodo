@@ -133,7 +133,7 @@ def load_model(
 
     An explicit text_encoder_base_model selects local LLM2Vec loading, bypassing
     the text encoder API. The supervised adapter remains unchanged. Explicit revisions pin HF downloads;
-    a model revision takes precedence over CHECKPOINT_DIR.
+    CHECKPOINT_DIR takes precedence over HF downloads.
 
     Returns:
         Loaded model in eval mode, or (model, resolved short key) if
@@ -157,7 +157,7 @@ def load_model(
     resolved_modelname = modelname
 
     # In case, we specify a custom checkpoint directory
-    configured_checkpoint_dir = None if model_revision else get_env_var("CHECKPOINT_DIR")
+    configured_checkpoint_dir = get_env_var("CHECKPOINT_DIR")
     if configured_checkpoint_dir:
         print(f"CHECKPOINT_DIR is set to {configured_checkpoint_dir}, checking the local cache...")
         # Checkpoint folders are named by display name (e.g. Kimodo-SOMA-RP-v1)

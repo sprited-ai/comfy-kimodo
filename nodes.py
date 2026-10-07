@@ -135,6 +135,9 @@ class Kimodo_LoadModel:
         # Set CHECKPOINT_DIR to ComfyUI models folder if models exist there
         if os.path.isdir(os.path.join(KIMODO_MODELS_DIR, model)):
             os.environ["CHECKPOINT_DIR"] = KIMODO_MODELS_DIR
+        text_encoders_dir = os.path.join(folder_paths.models_dir, "text_encoders")
+        if os.path.isdir(text_encoders_dir):
+            os.environ.setdefault("TEXT_ENCODERS_DIR", text_encoders_dir)
 
         kimodo_model, resolved = load_model(
             short_key, device=str(device), return_resolved_name=True,
