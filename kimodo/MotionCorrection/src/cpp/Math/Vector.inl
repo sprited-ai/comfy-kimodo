@@ -1635,9 +1635,15 @@ namespace Math
     FORCE_INLINE Vector Vector::Swizzle(uint32_t xIdx, uint32_t yIdx, uint32_t zIdx, uint32_t wIdx) const
     {
         ASSERT(xIdx < 4 && yIdx < 4 && zIdx < 4 && wIdx < 4);
+#if defined(__aarch64__) || defined(_M_ARM64)
+        float values[4];
+        _mm_storeu_ps(values, m_data);
+        return _mm_setr_ps(values[xIdx], values[yIdx], values[zIdx], values[wIdx]);
+#else
         uint32_t const elem[4] = { xIdx, yIdx, zIdx, wIdx };
         __m128i vControl = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&elem[0]));
         return _mm_permutevar_ps(m_data, vControl);
+#endif
     }
 
     FORCE_INLINE Vector Vector::Shuffle(uint32_t xIdx, uint32_t yIdx, uint32_t zIdx, uint32_t wIdx) const

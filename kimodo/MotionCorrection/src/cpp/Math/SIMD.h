@@ -6,7 +6,14 @@
 #pragma once
 
 #include <stdint.h>
+#if defined(__aarch64__) || defined(_M_ARM64)
+#pragma push_macro("FORCE_INLINE")
+#undef FORCE_INLINE
+#include <sse2neon.h>
+#pragma pop_macro("FORCE_INLINE")
+#else
 #include <immintrin.h>
+#endif
 
 namespace SIMD
 {
